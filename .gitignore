@@ -1,0 +1,9 @@
+*.srt
+*.txt
+*.vtt
+*.tsv
+*.json
+*.mp3
+.venv/
+.idea/
+dist/

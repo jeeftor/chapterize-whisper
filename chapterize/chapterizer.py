@@ -1,4 +1,5 @@
 import os
+import re
 import argparse
 from glob import glob
 from pathlib import Path
@@ -9,6 +10,10 @@ from rich.console import Console
 from rich.panel import Panel
 import time
 from datetime import timedelta
+from rich.live import Live
+from rich.layout import Layout
+from rich.table import Table
+from rich.text import Text
 
 class Chapterizer:
     def __init__(self, base_dir, model_type="base", device="cpu", compute_type="int8", num_workers=4):
@@ -26,6 +31,13 @@ class Chapterizer:
         self.partial_files = []
         self.unprocessed_files = []
         self.failed_files = []
+
+        # Initialize layout components
+        self.layout = Layout()
+        self.status_table = Table.grid(padding=(0, 1))
+        self.status_table.add_column()
+        self.current_file = None
+        self.detected_chapters = []
 
     def format_timestamp(self, seconds):
         """Convert seconds to SRT timestamp format HH:MM:SS,mmm"""
@@ -64,6 +76,51 @@ class Chapterizer:
             self.console.print(f"[red]Error validating {file_path}: {str(e)}[/]")
             return False
 
+    def is_chapter_title(self, text):
+        """Enhanced chapter detection with common patterns"""
+        text_lower = text.lower().strip()
+
+        # Common chapter patterns
+        patterns = [
+            r'^chapter\s+\d+',
+            r'^book\s+\d+',
+            r'^part\s+\d+',
+            r'^section\s+\d+',
+            r'^volume\s+\d+',
+            r'^epilogue',
+            r'^prologue',
+            r'^introduction',
+            r'^preface',
+            r'^appendix',
+            r'^afterword',
+            r'^interlude',
+            r'^act\s+\d+',
+            r'^\d+\.',  # Numbered chapters without "chapter"
+            r'book\s+\d+:\s+chapter',
+        ]
+
+        # Special phrases
+        special_phrases = [
+            'read for you by',
+            'end of chapter',
+            'end of book',
+            'end of part'
+        ]
+
+        # Check against regex patterns
+        if any(re.match(pattern, text_lower) for pattern in patterns):
+            return True
+
+        # Check against special phrases
+        if any(phrase in text_lower for phrase in special_phrases):
+            return True
+
+        # Check for numbered patterns
+        if re.match(r'^\d+\s*$', text_lower):  # Just a number
+            return True
+
+        return False
+
     def find_audio_files(self):
         """Recursively find all MP3 files in the base directory."""
         return sorted(self.base_dir.rglob("*.mp3"))
@@ -88,7 +145,6 @@ class Chapterizer:
             srt_path = audio_file.with_suffix('.srt')
 
             if srt_path.exists():
-                # Quick transcribe to get duration for validation
                 with self.console.status(f"[yellow]Checking {base_name}...", spinner="dots"):
                     _, info = self.model.transcribe(str(audio_file), language="en")
                     expected_duration = round(info.duration)
@@ -101,18 +157,40 @@ class Chapterizer:
             else:
                 self.unprocessed_files.append(audio_file)
 
+    def create_layout(self):
+        """Create the layout for the Live display"""
+        self.layout.split_column(
+            Layout(name="progress", size=2),
+            Layout(name="chapters", size=3),
+            Layout(name="stats", size=2)
+        )
+
+    def update_layout(self, progress_text, chapters, stats):
+        """Update the layout with current information"""
+        self.layout["progress"].update(Panel(progress_text))
+        self.layout["chapters"].update(Panel("\n".join(chapters) if chapters else "No chapters detected yet"))
+        self.layout["stats"].update(Panel(stats))
+
     def process_file(self, audio_file, progress, file_task):
         """Process a single audio file and create SRT output."""
         try:
             base_name = audio_file.stem
             output_path = audio_file.with_suffix('.srt')
+            chapters_found = []
 
+            # Modified transcription parameters
             segments, info = self.model.transcribe(
                 str(audio_file),
                 word_timestamps=True,
                 language="en",
                 beam_size=5,
-                vad_filter=True
+                vad_filter=True,
+                vad_parameters=dict(
+                    min_silence_duration_ms=1000,
+                    speech_pad_ms=400,
+                ),
+                condition_on_previous_text=True,
+                initial_prompt="This is an audiobook with chapters."
             )
 
             total_duration = round(info.duration)
@@ -123,19 +201,48 @@ class Chapterizer:
                             description=f"[cyan]Processing {base_name}")
 
             start_time = time.time()
+            last_update_time = time.time()
             last_timestamp = 0
 
-            with open(output_path, 'w', encoding='utf-8') as f:
-                for i, segment in enumerate(segments, 1):
-                    f.write(f"{i}\n")
-                    f.write(f"{self.format_timestamp(segment.start)} --> {self.format_timestamp(segment.end)}\n")
-                    f.write(f"{segment.text.strip()}\n")
-                    f.write("\n")
+            segments_list = list(segments)
 
-                    current_timestamp = round(segment.end)
-                    if current_timestamp > last_timestamp:
-                        progress.update(file_task, completed=current_timestamp)
-                        last_timestamp = current_timestamp
+            with Live(self.layout, refresh_per_second=4) as live:
+                with open(output_path, 'w', encoding='utf-8') as f:
+                    current_chapter = None
+
+                    for i, segment in enumerate(segments_list, 1):
+                        text = segment.text.strip()
+
+                        # Chapter detection
+                        if self.is_chapter_title(text):
+                            current_chapter = text
+                            chapters_found.append(f"[yellow]Chapter detected: {text}[/]")
+
+                            # Update layout less frequently to prevent flicker
+                            current_time = time.time()
+                            if current_time - last_update_time > 0.25:  # Update max 4 times per second
+                                self.update_layout(
+                                    f"Processing {base_name}\n{progress}",
+                                    chapters_found[-5:],  # Show last 5 chapters
+                                    f"Progress: {round(segment.end/total_duration * 100)}%"
+                                )
+                                last_update_time = current_time
+
+                        # Write SRT entry
+                        f.write(f"{i}\n")
+                        f.write(f"{self.format_timestamp(segment.start)} --> {self.format_timestamp(segment.end)}\n")
+
+                        if current_chapter and text in current_chapter:
+                            f.write(f"[CHAPTER] {text}\n")
+                        else:
+                            f.write(f"{text}\n")
+
+                        f.write("\n")
+
+                        current_timestamp = round(segment.end)
+                        if current_timestamp > last_timestamp:
+                            progress.update(file_task, completed=current_timestamp)
+                            last_timestamp = current_timestamp
 
             if last_timestamp < total_duration:
                 progress.update(file_task, completed=total_duration)
@@ -144,7 +251,12 @@ class Chapterizer:
             speed = round(total_duration / duration, 2)
             self.console.print(f"[green]Processed at {speed}x real-time speed[/]")
 
+            # Display final chapters
+            if chapters_found:
+                self.console.print(Panel("\n".join(chapters_found), title="Detected Chapters"))
+
             return True
+
         except Exception as e:
             self.console.print(f"[red]Error processing {base_name}: {str(e)}[/]")
             self.failed_files.append(audio_file)
@@ -154,6 +266,7 @@ class Chapterizer:
         """Main execution method."""
         self.initialize_model()
         self.categorize_files()
+        self.create_layout()
 
         total_files = len(self.unprocessed_files)
 

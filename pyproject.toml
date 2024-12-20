@@ -9,6 +9,7 @@ readme = "README.md"
 python = "^3.12"
 faster-whisper = "^1.1.0"
 rich = "^13.9.4"
+pydub = "^0.25.1"
 
 
 [build-system]

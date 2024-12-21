@@ -142,6 +142,7 @@ class BookTranscriber:
         self.directory = directory
         self.audio_files = self._get_audio_files()
         self._clean_detection_files()
+        console.print(f"Found {len(self.audio_files)} audio files in {self.directory}")
 
     def _clean_detection_files(self):
         console.print("Cleaning up detection files...")
@@ -168,7 +169,7 @@ class BookTranscriber:
 
     def _get_audio_files(self) -> list:
         # Define the audio file extensions to look for
-        audio_extensions = ['**/*.mp3', '**/*.ogg', '**/*.m4a', '**/*.wav', '**/*.flac']
+        audio_extensions = ['**/*.mp3', '**/*.ogg', '**/*.m4a', '**/*.wav', '**/*.flac', '**/*.m4b']
         audio_files = []
 
         # Search for audio files with the specified extensions
@@ -180,27 +181,37 @@ class BookTranscriber:
         return audio_files
 
 
+    async def transcribe(self) -> None:
+        offset_seconds: float = 0.0
+        offset_index: int = 0
 
+        for audio_file in self.audio_files:
+            t = FileTranscriber(audio_file)
+            console.print(f"Transcribing with offset {offset_index} and index {offset_index}")
+            offset_index, offset_seconds = await t.transcribe_with_progress(offset_index, offset_seconds)
+            console.print(f"Transcribed {audio_file} with {offset_index} segments and {offset_seconds} seconds offset.")
 
-# Example usage
-if __name__ == "__main__":
-    bt = BookTranscriber("../data")
-    offset_seconds: float = 0.0
-    offset_index: int = 0
-
-    for audio_file in bt.audio_files:
-        t = FileTranscriber(audio_file)
-        console.print(f"Transcribing with offset {offset_index} and index {offset_index}")
-        offset_index, offset_seconds = asyncio.run(t.transcribe_with_progress(offset_index, offset_seconds))
-        console.print(f"Transcribed {audio_file} with {offset_index} segments and {offset_seconds} seconds offset.")
-
-    # offset_seconds: float = 0.0
-    # offset_index: int = 0
-    # for audio_file in bt.audio_files:
-    #     t = FileTranscriber(audio_file)
-    #     console.print(f"Transcribing with offset {offset_index} and index {offset_index}")
-    #     offset_index, offset_seconds = asyncio.run(t.batch_transcribe_with_progress(offset_index, offset_seconds))
-    #     console.print(f"Transcribed {audio_file} with {offset_index} segments and {offset_seconds} seconds offset.")
-    #
-    #
+#
+#
+# # Example usage
+# if __name__ == "__main__":
+#     bt = BookTranscriber("../data")
+#     offset_seconds: float = 0.0
+#     offset_index: int = 0
+#
+#     for audio_file in bt.audio_files:
+#         t = FileTranscriber(audio_file)
+#         console.print(f"Transcribing with offset {offset_index} and index {offset_index}")
+#         offset_index, offset_seconds = asyncio.run(t.transcribe_with_progress(offset_index, offset_seconds))
+#         console.print(f"Transcribed {audio_file} with {offset_index} segments and {offset_seconds} seconds offset.")
+#
+#     # offset_seconds: float = 0.0
+#     # offset_index: int = 0
+#     # for audio_file in bt.audio_files:
+#     #     t = FileTranscriber(audio_file)
+#     #     console.print(f"Transcribing with offset {offset_index} and index {offset_index}")
+#     #     offset_index, offset_seconds = asyncio.run(t.batch_transcribe_with_progress(offset_index, offset_seconds))
+#     #     console.print(f"Transcribed {audio_file} with {offset_index} segments and {offset_seconds} seconds offset.")
+#     #
+#     #
 

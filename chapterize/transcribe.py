@@ -32,6 +32,12 @@ class FileTranscriber:
         self.info = None
         self.audio_file = audio_file
         self.audio_directory = os.path.dirname(audio_file)
+        self.parent_directory = os.path.basename(self.audio_directory)
+
+        self.chapter_file = os.path.join(self.audio_directory, self.parent_directory + ".chapters")
+        self.srt_file = os.path.join(self.audio_directory, self.parent_directory + ".srt")
+        self.batch_srt_file = os.path.join(self.audio_directory, self.parent_directory + ".batch.srt")
+
         self.segments = None
         self.batch_segments = None
         self.model: WhisperModel = WhisperModel(
@@ -51,36 +57,58 @@ class FileTranscriber:
         self.batched_model: BatchedInferencePipeline = BatchedInferencePipeline(self.model)
 
 
-    async def _process_segment(self, segment: Segment, segment_number: int, offset: float):
+    async def _process_segment(self, segment: Segment, segment_number: int, offset: float, is_batch: bool = False) -> None:
+
+
+
         if is_chapter(segment.text):
             print(f"CHAPTER MAYBE DETECTED:: {segment.text}")
-            async with aiofiles.open(f'{self.audio_directory}/transcription.chapters', 'a', encoding='utf-8') as f:
+            async with aiofiles.open(self.chapter_file, 'a', encoding='utf-8') as f:
                 await f.write(f"{segment.start + offset}, {segment.text}\n")
 
+        start_time = format_timestamp_srt(segment.start, offset)
+        end_time = format_timestamp_srt(segment.end, offset)
 
-        # Write to an output file
-        async with aiofiles.open(f'{self.audio_directory}/transcription.srt', 'a', encoding='utf-8') as f:
-            start_time = format_timestamp_srt(segment.start, offset)
-            end_time = format_timestamp_srt(segment.end, offset)
-            await f.write(f"{segment_number}\n{start_time} --> {end_time}\n{(segment.text.strip())}\n\n")
+        if is_batch:
+            # This needs to be sorted when done.
+            async with aiofiles.open(self.batch_srt_file, 'a', encoding='utf-8') as f:
+                await f.write(f"{segment_number}\n{start_time} --> {end_time}\n{(segment.text.strip())}\n\n")
+
+        else:
+            # Write to an output file
+            async with aiofiles.open(self.srt_file, 'a', encoding='utf-8') as f:
+                await f.write(f"{segment_number}\n{start_time} --> {end_time}\n{(segment.text.strip())}\n\n")
 
 
-    # async def batch_transcribe(self, batch_size: int = 32) -> TranscriptionInfo:
-    #     segments, info = self.batched_model.transcribe(self.audio_file, batch_size=batch_size)
-    #     async with aiofiles.open(f'{self.audio_directory}.srt', 'w', encoding='utf-8') as f:
-    #         for segment in segments:
-    #             percent = round((segment.end / info.duration * 100), 1)
-    #             await f.write(f"{percent}% - {segment.text}\n")
-    #             print(f"{percent}% {segment.text}")
-    #     return info
-    # async def transcribe(self) -> TranscriptionInfo:
-    #     segments, info = self.model.transcribe(self.audio_file)
-    #     async with aiofiles.open(f'{self.audio_directory}.srt', 'w', encoding='utf-8') as f:
-    #         for segment in segments:
-    #             percent = round((segment.end / info.duration * 100), 1)
-    #             await f.write(f"{percent}% - {segment.text}\n")
-    #             print(f"{percent}% {segment.text}")
-    #     return info
+
+    async def batch_transcribe_with_progress(self, offset_index: int = 0, offset_seconds:float = 0.0)  -> tuple[int, float]:
+        console.print("Starting Batch transcription of audio files...")
+        progress = Progress(
+            SpinnerColumn(),
+            TextColumn("[bold blue]{task.description}"),
+            BarColumn(bar_width=50),
+            TaskProgressColumn(),
+            TimeRemainingColumn(),
+            TextColumn("[bold]{task.fields[status]}"),
+            console=console  # Using the console you already defined at module level
+        )
+        with Live(progress, refresh_per_second=10):
+            task = progress.add_task(f"{self.audio_file}", total=100, status="Starting...")
+            segments, info = self.batched_model.transcribe(self.audio_file)
+
+            for index, segment in enumerate(segments, offset_index):
+                percent = round((segment.end / info.duration * 100), 1)
+                await self._process_segment(segment, index, offset_seconds, is_batch=True)
+                # Update progress with current segment text
+                progress.update(
+                    task,
+                    completed=percent,
+                    status=f"Transcribing: {segment.text[:50]}..."
+                )
+
+        return index, info.duration
+
+
 
     async def transcribe_with_progress(self, offset_index: int = 0, offset_seconds:float = 0.0)  -> tuple[int, float]:
 
@@ -98,16 +126,16 @@ class FileTranscriber:
             segments, info = self.model.transcribe(self.audio_file)
 
             async with aiofiles.open(f'{self.audio_file}.srt', 'w', encoding='utf-8') as f:
-                for index, segment in enumerate(segments, 1):
+                for index, segment in enumerate(segments, offset_index):
                     percent = round((segment.end / info.duration * 100), 1)
-                    await self._process_segment(segment, index + offset_index, offset_seconds)
+                    await self._process_segment(segment, index, offset_seconds, is_batch=False)
                 # Update progress with current segment text
                     progress.update(
                         task,
                         completed=percent,
                         status=f"Transcribing: {segment.text[:50]}..."
                     )
-        return index, info.duration
+        return index + 1, info.duration
 
 class BookTranscriber:
     def __init__(self, directory: str) -> None:
@@ -117,17 +145,16 @@ class BookTranscriber:
 
     def _clean_detection_files(self):
         console.print("Cleaning up detection files...")
-        for audio_file in self.audio_files:
-            for ext in ['srt', 'chapters']:
-                try:
-                    os.remove(f'{audio_file}.{ext}')
-                    console.print(f"Removed {audio_file}.{ext}")
-                except FileNotFoundError:
-                    pass
+        for transcription_file in self._get_transcription_files():
+            try:
+                os.remove(f'{transcription_file}')
+                console.print(f"Removed {transcription_file}")
+            except FileNotFoundError:
+                pass
 
-    def _get_audio_files(self) -> list:
+    def _get_transcription_files(self) -> list:
         # Define the audio file extensions to look for
-        audio_extensions = ['*.mp3', '*.ogg', '*.m4a', '*.wav', '*.flac']
+        audio_extensions = ['*.srt', '*.chapters']
         audio_files = []
 
         # Search for audio files with the specified extensions
@@ -139,17 +166,32 @@ class BookTranscriber:
         return audio_files
 
 
+    def _get_audio_files(self) -> list:
+        # Define the audio file extensions to look for
+        audio_extensions = ['**/*.mp3', '**/*.ogg', '**/*.m4a', '**/*.wav', '**/*.flac']
+        audio_files = []
+
+        # Search for audio files with the specified extensions
+        for ext in audio_extensions:
+            audio_files.extend(glob(os.path.join(self.directory, ext), recursive=True))
+
+        # Sort the audio files
+        audio_files.sort()
+        return audio_files
+
+
 
 
 # Example usage
 if __name__ == "__main__":
     bt = BookTranscriber("../data")
-    offset_seconds = 0.0
-    offset_index = 0
+    offset_seconds: float = 0.0
+    offset_index: int = 0
 
     for audio_file in bt.audio_files:
         t = FileTranscriber(audio_file)
-        offset_seconds, offset_index = asyncio.run(t.transcribe_with_progress(offset_index, offset_seconds))
+        console.print(f"Transcribing with offset {offset_index} and index {offset_index}")
+        offset_index, offset_seconds = asyncio.run(t.batch_transcribe_with_progress(offset_index, offset_seconds))
         console.print(f"Transcribed {audio_file} with {offset_index} segments and {offset_seconds} seconds offset.")
 
 

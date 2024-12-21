@@ -154,7 +154,7 @@ class BookTranscriber:
 
     def _get_transcription_files(self) -> list:
         # Define the audio file extensions to look for
-        audio_extensions = ['*.srt', '*.chapters']
+        audio_extensions = ['**/*.srt', '**/*.chapters']
         audio_files = []
 
         # Search for audio files with the specified extensions
@@ -191,8 +191,16 @@ if __name__ == "__main__":
     for audio_file in bt.audio_files:
         t = FileTranscriber(audio_file)
         console.print(f"Transcribing with offset {offset_index} and index {offset_index}")
-        offset_index, offset_seconds = asyncio.run(t.batch_transcribe_with_progress(offset_index, offset_seconds))
+        offset_index, offset_seconds = asyncio.run(t.transcribe_with_progress(offset_index, offset_seconds))
         console.print(f"Transcribed {audio_file} with {offset_index} segments and {offset_seconds} seconds offset.")
 
-
+    # offset_seconds: float = 0.0
+    # offset_index: int = 0
+    # for audio_file in bt.audio_files:
+    #     t = FileTranscriber(audio_file)
+    #     console.print(f"Transcribing with offset {offset_index} and index {offset_index}")
+    #     offset_index, offset_seconds = asyncio.run(t.batch_transcribe_with_progress(offset_index, offset_seconds))
+    #     console.print(f"Transcribed {audio_file} with {offset_index} segments and {offset_seconds} seconds offset.")
+    #
+    #
 

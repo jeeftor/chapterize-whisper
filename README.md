@@ -50,7 +50,7 @@ You'll notice some chapters are missing a full description - and some are wrong 
 
 For example to fix `Chapter 5.` open up the `.srt` file and look for where chapter 5 is:
 
-```
+```srt
 318
 00:17:17,137 --> 00:17:18,977
 Chapter 5.
@@ -109,3 +109,16 @@ Once you've cleaned up the chapter files it will look like something like this. 
 
 The next step would be to upload this "chapter definition" to audiobook shelf
 
+In audiobook shelf if we uploaded this data this is what it would look like:
+
+![image1](./docs/pre-chapters.jpg)
+
+As you can see the chapter data is bad.
+
+If you look at Audiobookshelf's URL you'll see something like this:
+
+`https://audiobookshelf.local/item/2b1a5c2f-02e4-47bb-99ab-cc800aeafec7`
+
+What we care about is the UUID for the item:
+
+`2b1a5c2f-02e4-47bb-99ab-cc800aeafec7`

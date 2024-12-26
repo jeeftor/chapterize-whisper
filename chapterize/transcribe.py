@@ -62,7 +62,7 @@ class FileTranscriber:
 
 
         if is_chapter(segment.text):
-            print(f"CHAPTER MAYBE DETECTED:: {segment.text}")
+            print(f"Possible Chapter [{segment.start + offset}] : {segment.text}")
             async with aiofiles.open(self.chapter_file, 'a', encoding='utf-8') as f:
                 await f.write(f"{segment.start + offset}, {segment.text}\n")
 
@@ -125,16 +125,16 @@ class FileTranscriber:
             task = progress.add_task(f"{self.audio_file}", total=100, status="Starting...")
             segments, info = self.model.transcribe(self.audio_file)
 
-            async with aiofiles.open(f'{self.audio_file}.srt', 'w', encoding='utf-8') as f:
-                for index, segment in enumerate(segments, offset_index):
-                    percent = round((segment.end / info.duration * 100), 1)
-                    await self._process_segment(segment, index, offset_seconds, is_batch=False)
-                # Update progress with current segment text
-                    progress.update(
-                        task,
-                        completed=percent,
-                        status=f"Transcribing: {segment.text[:50]}..."
-                    )
+            # async with aiofiles.open(f'{self.audio_file}.srt', 'w', encoding='utf-8') as f:
+            for index, segment in enumerate(segments, offset_index):
+                percent = round((segment.end / info.duration * 100), 1)
+                await self._process_segment(segment, index, offset_seconds, is_batch=False)
+            # Update progress with current segment text
+                progress.update(
+                    task,
+                    completed=percent,
+                    status=f"Transcribing: {segment.text[:50]}..."
+                )
         return index + 1, info.duration
 
 class BookTranscriber:

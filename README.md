@@ -1,4 +1,4 @@
-# Chapterizer
+# Chapterize-Whisper
 
 
 Uses whisper and will make some automatic stuff

@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "chapterize"
+name = "chapterize-whisper"
 version = "0.1.0"
 description = ""
 authors = ["Jeff Stein <jeffstein@gmail.com>"]
@@ -20,6 +20,9 @@ aiofiles = "^24.1.0"
 click = "^8.1.8"
 requests = "^2.32.3"
 
+
+[tool.poetry.group.dev.dependencies]
+twine = "^6.0.1"
 
 [build-system]
 requires = ["poetry-core"]

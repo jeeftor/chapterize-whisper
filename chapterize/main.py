@@ -56,7 +56,7 @@ async def async_detect(dir: str):
 @click.option(
     '--abs-url',
     envvar='ABS_URL',
-    help='Absolute URL for upload (or set ABS_URL env var)',
+    help='Audiobookshelf URL (http/https) (or set ABS_URL env var)',
     required=True
 )
 @click.option(

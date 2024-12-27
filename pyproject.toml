@@ -4,6 +4,11 @@ version = "0.1.0"
 description = ""
 authors = ["Jeff Stein <jeffstein@gmail.com>"]
 readme = "README.md"
+packages = [{include = "chapterize"}]
+
+[tool.poetry.scripts]
+chapterize = "chapterize.main:cli"
+
 
 [tool.poetry.dependencies]
 python = "^3.12"
@@ -12,6 +17,8 @@ rich = "^13.9.4"
 pydub = "^0.25.1"
 mutagen = "^1.47.0"
 aiofiles = "^24.1.0"
+click = "^8.1.8"
+requests = "^2.32.3"
 
 
 [build-system]

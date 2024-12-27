@@ -6,6 +6,12 @@ Uses whisper and will make some automatic stuff
 
 Batch mode is faster - but - it seems to give worse results for chapterfinding - so we use a slower option.
 
+To install globally I think you can use:
+
+```bash
+pip install -U chapterize-whisper
+chapterize --help
+```
 
 
 # Example

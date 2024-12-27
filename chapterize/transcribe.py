@@ -34,8 +34,8 @@ class FileTranscriber:
         self.audio_directory = os.path.dirname(audio_file)
         self.parent_directory = os.path.basename(self.audio_directory)
 
-        self.chapter_file_s = os.path.join(self.audio_directory, self.parent_directory + ".chapters_seconds")
-        self.chapter_file_hms = os.path.join(self.audio_directory, self.parent_directory + ".chapters_hms")
+        # self.chapter_file_s = os.path.join(self.audio_directory, self.parent_directory + ".chapters_seconds")
+        self.chapter_file = os.path.join(self.audio_directory, self.parent_directory + ".chapters")
         self.srt_file = os.path.join(self.audio_directory, self.parent_directory + ".srt")
         self.batch_srt_file = os.path.join(self.audio_directory, self.parent_directory + ".batch.srt")
 
@@ -60,14 +60,17 @@ class FileTranscriber:
 
     async def _process_segment(self, segment: Segment, segment_number: int, offset: float, is_batch: bool = False) -> None:
 
+        if segment_number == 0:
+            # First Segment
+            async with aiofiles.open(self.chapter_file, 'a', encoding='utf-8') as f:
+                await f.write(f"00:00:00,0000, BOOK Start\n")
 
 
         if is_chapter(segment.text):
-            print(f"Possible Chapter [{segment.start + offset}] : {segment.text}")
-            async with aiofiles.open(self.chapter_file_s, 'a', encoding='utf-8') as f:
-                await f.write(f"{segment.start + offset}, {segment.text}\n")
-            async with aiofiles.open(self.chapter_file_hms, 'a', encoding='utf-8') as f:
-                await f.write(f"{format_timestamp_srt(segment.start, offset)}, {segment.text}\n")
+            time_hms = format_timestamp_srt(segment.start, offset)
+            print(f"Possible Chapter [{time_hms}] : {segment.text}")
+            async with aiofiles.open(self.chapter_file, 'a', encoding='utf-8') as f:
+                await f.write(f"{time_hms}, {segment.text}\n")
 
         start_time = format_timestamp_srt(segment.start, offset)
         end_time = format_timestamp_srt(segment.end, offset)
@@ -128,17 +131,16 @@ class FileTranscriber:
             task = progress.add_task(f"{self.audio_file}", total=100, status="Starting...")
             segments, info = self.model.transcribe(self.audio_file)
 
-            # async with aiofiles.open(f'{self.audio_file}.srt', 'w', encoding='utf-8') as f:
             for index, segment in enumerate(segments, offset_index):
                 percent = round((segment.end / info.duration * 100), 1)
                 await self._process_segment(segment, index, offset_seconds, is_batch=False)
-            # Update progress with current segment text
+                # Update progress with current segment text
                 progress.update(
                     task,
                     completed=percent,
                     status=f"Transcribing: {segment.text[:50]}..."
                 )
-        return index + 1, info.duration
+        return index + 1, info.duration + offset_seconds
 
 class BookTranscriber:
     def __init__(self, directory: str) -> None:
@@ -158,7 +160,7 @@ class BookTranscriber:
 
     def _get_transcription_files(self) -> list:
         # Define the audio file extensions to look for
-        audio_extensions = ['**/*.srt', '**/*.chapters_*']
+        audio_extensions = ['**/*.srt', '**/*.chapters']
         audio_files = []
 
         # Search for audio files with the specified extensions
@@ -188,33 +190,17 @@ class BookTranscriber:
         offset_seconds: float = 0.0
         offset_index: int = 0
 
+
         for audio_file in self.audio_files:
             t = FileTranscriber(audio_file)
             console.print(f"Transcribing with offset {offset_index} and index {offset_index}")
             offset_index, offset_seconds = await t.transcribe_with_progress(offset_index, offset_seconds)
             console.print(f"Transcribed {audio_file} with {offset_index} segments and {offset_seconds} seconds offset.")
+            chapter_file = t.chapter_file
 
-#
-#
-# # Example usage
-# if __name__ == "__main__":
-#     bt = BookTranscriber("../data")
-#     offset_seconds: float = 0.0
-#     offset_index: int = 0
-#
-#     for audio_file in bt.audio_files:
-#         t = FileTranscriber(audio_file)
-#         console.print(f"Transcribing with offset {offset_index} and index {offset_index}")
-#         offset_index, offset_seconds = asyncio.run(t.transcribe_with_progress(offset_index, offset_seconds))
-#         console.print(f"Transcribed {audio_file} with {offset_index} segments and {offset_seconds} seconds offset.")
-#
-#     # offset_seconds: float = 0.0
-#     # offset_index: int = 0
-#     # for audio_file in bt.audio_files:
-#     #     t = FileTranscriber(audio_file)
-#     #     console.print(f"Transcribing with offset {offset_index} and index {offset_index}")
-#     #     offset_index, offset_seconds = asyncio.run(t.batch_transcribe_with_progress(offset_index, offset_seconds))
-#     #     console.print(f"Transcribed {audio_file} with {offset_index} segments and {offset_seconds} seconds offset.")
-#     #
-#     #
+        # When we are done the final info is:
+        book_duration = offset_seconds
 
+        # Write the duration to the chapter files.
+        async with aiofiles.open(chapter_file, 'a', encoding='utf-8') as f:
+            await f.write(f"{format_timestamp_srt(book_duration,0)}, BOOK_END\n")

@@ -119,13 +119,11 @@ Once you've cleaned up the chapter files it will look like something like this. 
 01:46:18,820, BOOK_END
 ```
 
-The next step would be to upload this "chapter definition" to audiobook shelf
+The next step would be to upload this "chapter definition" to audiobook shelf.
 
-In audiobook shelf if we uploaded this data this is what it would look like:
+First we need to upload this audiobook itself to Audiobookshelf - and as you can see - it doesnt have any chapter data
 
 ![image1](./docs/pre-chapters.jpg)
-
-As you can see the chapter data is bad.
 
 If you look at Audiobookshelf's URL you'll see something like this:
 
@@ -135,11 +133,25 @@ What we care about is the UUID for the item:
 
 `2b1a5c2f-02e4-47bb-99ab-cc800aeafec7`
 
+So with this information we can do the following:
 
-### Uploading chapter data
 
-Next we will use the API https://api.audiobookshelf.org/#book-chapter to turn our .chapter_xxx file into an array of `book chapters` which can be uploaded to audiobookshelf
+```bash
 
-and when we are done it looks like this:
+ chapterize upload \
+   --dir ./audio/danny_meadow_mouse_1301_librivox \
+   --id 2b1a5c2f-02e4-47bb-99ab-cc800aeafec7  \
+   --abs-url https://audiobookshelf.local \
+   --api-key this-is-a-fake-api-key
+```
+
+
+[//]: # (### Uploading chapter data)
+
+[//]: # ()
+[//]: # (Next we will use the API https://api.audiobookshelf.org/#book-chapter to turn our .chapter_xxx file into an array of `book chapters` which can be uploaded to audiobookshelf)
+
+[//]: # ()
+[//]: # (and when we are done it looks like this:)
 
 ![done](docs/post-chapters.jpg)

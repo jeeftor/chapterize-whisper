@@ -24,10 +24,11 @@ class ABSUpdater:
         chapter_files.extend(glob(os.path.join(self.book_directory, "*.chapters"), recursive=True))
         return chapter_files[0]
 
-
     def update_chapters(self, id: str):
-
         update_url = f"{self.abs_url}/api/items/{id}/chapters"
+
+        print(f"\nProcessing chapters update for item ID: {id}")
+        print(f"Total chapters to update: {len(self.chapters)}")
 
         # Convert chapters to the expected JSON format
         chapters_data = {
@@ -41,22 +42,49 @@ class ABSUpdater:
                 for chapter in self.chapters
             ]
         }
+
+        # Print chapter details before sending
+        print("\nChapter details to be updated:")
+        for idx, chapter in enumerate(self.chapters, 1):
+            print(f"  Chapter {idx:02d}: '{chapter.title}' ({chapter.start} - {chapter.end})")
+
         # Set up headers
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
         }
 
-        # Make the POST request
-        response = requests.post(
-            update_url,
-            headers=headers,
-            json=chapters_data
-        )
+        print(f"\nSending update request to: {update_url}")
 
-        # You might want to handle the response
-        response.raise_for_status()  # Raises an exception for error status codes
-        return response.json()  # Return the response data if needed
+        # Make the POST request
+        try:
+            response = requests.post(
+                update_url,
+                headers=headers,
+                json=chapters_data
+            )
+
+            # Handle the response
+            response.raise_for_status()
+            response_data = response.json()
+
+            print(f"\nUpdate successful!")
+            print(f"Response status code: {response.status_code}")
+            print(f"Updated chapters count: {len(response_data.get('chapters', []))}")
+
+            return response_data
+
+        except requests.exceptions.RequestException as e:
+            print(f"\nError updating chapters:")
+            print(f"Status code: {getattr(e.response, 'status_code', 'N/A')}")
+            print(f"Error message: {str(e)}")
+            if hasattr(e, 'response') and e.response is not None:
+                try:
+                    error_detail = e.response.json()
+                    print(f"Server response: {error_detail}")
+                except ValueError:
+                    print(f"Raw server response: {e.response.text}")
+            raise
 
 
 

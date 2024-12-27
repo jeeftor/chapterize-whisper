@@ -7,6 +7,7 @@ import functools
 from rich.console import Console
 from typing import Optional
 
+from chapterize.audiobookshelf import ABSUpdater
 from chapterize.transcribe import BookTranscriber
 
 console = Console()
@@ -61,7 +62,7 @@ def cli():
 )
 def detect(dir: str, model: str, device: str, num_workers: int, cpu_threads: int):
     """Detect and process books in the specified directory."""
-    asyncio.run(async_detect(dir))
+    asyncio.run(async_detect(dir, model, device, num_workers, cpu_threads))
 
 async def async_detect(dir: str, model: str, device: str, num_workers: int, cpu_threads: int):
     """Async implementation of detect command."""
@@ -106,6 +107,9 @@ async def async_upload(dir: str, api_key: str, abs_url: str, book_id: str):
     console.print(f"URL: {abs_url}")
     console.print(f"Book ID: {book_id}")
     # Your async upload logic here
+
+    updater = ABSUpdater(book_directory=dir, abs_url=abs_url, api_key=api_key)
+    updater.update_chapters(id=book_id)
 
 if __name__ == '__main__':
     cli()

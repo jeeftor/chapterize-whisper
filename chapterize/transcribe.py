@@ -1,8 +1,12 @@
+import json
 import os
 from glob import glob
+from rich.progress import Progress, TimeElapsedColumn, BarColumn, TextColumn
+import warnings
 
 import aiofiles
-import asyncio
+from whisper_mps import whisper as whisper_mps
+
 from faster_whisper import WhisperModel, BatchedInferencePipeline
 from faster_whisper.transcribe import Segment, TranscriptionInfo
 from rich.progress import Progress, TextColumn, BarColumn, TaskProgressColumn, TimeRemainingColumn, SpinnerColumn
@@ -24,7 +28,36 @@ from rich.console import Console  # Changed this line
 
 from chapterize.utils import is_chapter, format_timestamp_srt
 
+
 console = Console()
+
+class MPSFileTranscriber:
+    def __init__(self, audio_file: str):
+        self.audio_file = audio_file
+        self.audio_directory = os.path.dirname(audio_file)
+        self.parent_directory = os.path.basename(self.audio_directory)
+
+        self.chapter_file = os.path.join(self.audio_directory, self.parent_directory + ".chapters")
+        self.srt_file = os.path.join(self.audio_directory, self.parent_directory + ".srt")
+        self.segments = None
+
+
+    def transcribe(self, model: str = "base"):
+        # with Progress(
+        #         TextColumn("🤗 [progress.description]"),
+        #         BarColumn(style="yellow1", pulse_style="white"),
+        #         TimeElapsedColumn(),
+        # ) as progress:
+        #     progress.add_task("[yellow]Transcribing...", total=None)
+        # text = whisper_mps.transcribe(self.audio_file, model="tiny.en", verbose=False)
+        text = whisper_mps.transcribe(self.audio_file, model="small", verbose=False)
+        return text
+       #      with open("output.json", "w", encoding="utf8") as fp:
+       #          json.dump(text, fp, ensure_ascii=False)
+       #      print(
+       #          f"Voila!✨ Your file has been transcribed go check it out over here 👉 output.json"
+       #      )
+       # return whisper_mps.transcribe(self.audio_file, model=model)
 
 class FileTranscriber:
     def __init__(self,
@@ -149,7 +182,7 @@ class FileTranscriber:
 
 class BookTranscriber:
     def __init__(self, directory: str, model: str = 'tiny.en', device: str = 'auto',
-                 num_workers: int = 8, cpu_threads: int = 0) -> None:
+                 num_workers: int = 8, cpu_threads: int = 0, use_mps=False) -> None:
         self.directory = directory
         self.model_config = {
             'model': model,
@@ -160,6 +193,8 @@ class BookTranscriber:
         self.audio_files = self._get_audio_files()
         self._clean_detection_files()
         console.print(f"Found {len(self.audio_files)} audio files in {self.directory}")
+        # Use mac accelleration
+        self.use_mps = use_mps
 
     def _clean_detection_files(self):
         console.print("Cleaning up detection files...")
@@ -197,8 +232,61 @@ class BookTranscriber:
         audio_files.sort()
         return audio_files
 
+    async def mps_transcribe(self) -> None:
+        results = []
+        for audio_file in self.audio_files:
+            t = MPSFileTranscriber(audio_file)
+            console.print(f"Going to transcribe {audio_file}")
+            results.append(t.transcribe()['segments'])
+            console.print("Done with transcription")
+            # console.print(result)
+            # console.print(f"Transcribing with offset {offset_index} and index {offset_index}")
+            # offset_index, offset_seconds = await t.transcribe_with_progress(offset_index, offset_seconds)
+            # console.print(f"Transcribed {audio_file} with {offset_index} segments and {offset_seconds} seconds offset.")
+            # chapter_file = t.chapter_file
+        with open("output.json", "w", encoding="utf8") as fp:
+            json.dump(results, fp, ensure_ascii=False)
+
+    def process_mps_results(self, results: list[dict]) -> list[dict]:
+        time_offset: float = 0
+        index_offset: int = 0
+        processed_results = []
+        for result in results:
+
+            for segment in result:
+
+                segment['id'] += index_offset
+                segment['start'] += time_offset
+                segment['end'] += time_offset
+
+                processed_results.append(
+                    {
+                        "id": segment['id'],
+                        "start": segment['start'],
+                        "end": segment['end'],
+                        "text": segment['text'].lstrip()
+                     })
+
+            # Update offsets for next result
+            index_offset = max(segment['id'] for segment in result) + 1
+            time_offset = max(segment['end'] for segment in result)
+
+        return  processed_results
+
+
+
+
 
     async def transcribe(self) -> None:
+        """Transcribe with the correct lib."""
+        if self.use_mps:
+            warnings.filterwarnings("ignore", category=FutureWarning, module="whisper_mps")
+
+            await self.mps_transcribe()
+        else:
+            await self.fast_transcribe()
+
+    async def fast_transcribe(self) -> None:
         offset_seconds: float = 0.0
         offset_index: int = 0
 

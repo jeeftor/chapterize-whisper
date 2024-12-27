@@ -1,4 +1,5 @@
 import asyncio
+import json
 import os
 from dotenv import load_dotenv
 
@@ -8,10 +9,27 @@ from chapterize.transcribe import BookTranscriber
 # Load environment variables from .env file
 load_dotenv()
 
+async def mps_transcribe():
+    # Setup a transcriber
+    bt = BookTranscriber(os.getenv("INPUT_DIRECTORY"), use_mps=True)
+
+    # Transcribe the file(s) please
+    # await bt.transcribe()
+
+
+    with open("output.json", "r", encoding="utf8") as fp:
+        results = json.load(fp)
+
+    done_results = bt.process_mps_results(results)
+
+    with open("done.json", "w", encoding="utf8") as fp:
+        json.dump(done_results, fp, ensure_ascii=False)
+
+
 async def transcribe():
 
     # Setup a transcriber
-    bt = BookTranscriber(os.getenv("INPUT_DIRECTORY"))
+    bt = BookTranscriber(os.getenv("INPUT_DIRECTORY"), use_mps=False)
 
     # Transcribe the file(s) please
     await bt.transcribe()
@@ -33,7 +51,8 @@ async def update_chapters():
 async def main():
 
     # await transcribe()
-    await update_chapters()
+    await mps_transcribe()
+    # await update_chapters()
 
 if __name__ == "__main__":
     asyncio.run(main())

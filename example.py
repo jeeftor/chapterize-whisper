@@ -30,8 +30,8 @@ async def update_chapters():
 
 async def main():
 
-    await transcribe()
-    # await update_chapters()
+    # await transcribe()
+    await update_chapters()
 
 if __name__ == "__main__":
     asyncio.run(main())

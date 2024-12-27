@@ -19,7 +19,7 @@ It will run a transcription process looking like this maybe:
 
 ![transscribe](docs/transcribe.jpg)
 
-Once done you'll get some `chapter` files. For example you might end up with this:
+Once done you'll get a `.chapter` file in the directory of your audio files. For example this is what came out:
 
 
 ```
@@ -135,3 +135,7 @@ What we care about is the UUID for the item:
 ### Uploading chapter data
 
 Next we will use the API https://api.audiobookshelf.org/#book-chapter to turn our .chapter_xxx file into an array of `book chapters` which can be uploaded to audiobookshelf
+
+and when we are done it looks like this:
+
+![done](docs/post-chapters.jpg)

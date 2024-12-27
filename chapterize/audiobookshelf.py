@@ -1,6 +1,5 @@
 import os
 import sys
-from dataclasses import dataclass
 from glob import glob
 from rich.prompt import Confirm
 import requests
@@ -8,7 +7,6 @@ from urllib.parse import quote_plus
 
 from chapterize.utils import parse_chapter_file
 from rich.prompt import Prompt
-from rich.console import Console
 
 # Chapter work https://api.audiobookshelf.org/#update-a-library-item-39-s-chapters
 
@@ -41,7 +39,7 @@ class ABSUpdater:
         try:
             response = requests.get(query_url, headers=self.headers)
         except requests.exceptions.RequestException as e:
-            print(f"\nError querying libraries:")
+            print("\nError querying libraries:")
             print(f"Status code: {getattr(e.response, 'status_code', 'N/A')}")
             print(f"Error message: {str(e)}")
             if hasattr(e, "response") and e.response is not None:
@@ -70,7 +68,7 @@ class ABSUpdater:
             try:
                 response = requests.get(query_url, headers=self.headers)
             except requests.exceptions.RequestException as e:
-                print(f"\nError querying libraries:")
+                print("\nError querying libraries:")
                 print(f"Status code: {getattr(e.response, 'status_code', 'N/A')}")
                 print(f"Error message: {str(e)}")
                 if hasattr(e, "response") and e.response is not None:
@@ -176,14 +174,14 @@ class ABSUpdater:
             response.raise_for_status()
             response_data = response.json()
 
-            print(f"\nUpdate successful!")
+            print("\nUpdate successful!")
             print(f"Response status code: {response.status_code}")
             print(f"Updated chapters count: {len(response_data.get('chapters', []))}")
 
             return response_data
 
         except requests.exceptions.RequestException as e:
-            print(f"\nError updating chapters:")
+            print("\nError updating chapters:")
             print(f"Status code: {getattr(e.response, 'status_code', 'N/A')}")
             print(f"Error message: {str(e)}")
             if hasattr(e, "response") and e.response is not None:

@@ -1,7 +1,7 @@
 import json
 import os
 from glob import glob
-from rich.progress import Progress, TimeElapsedColumn, BarColumn, TextColumn
+from rich.progress import Progress, BarColumn, TextColumn
 import warnings
 import time
 
@@ -9,11 +9,8 @@ import aiofiles
 from whisper_mps import whisper as whisper_mps
 
 from faster_whisper import WhisperModel, BatchedInferencePipeline
-from faster_whisper.transcribe import Segment, TranscriptionInfo
+from faster_whisper.transcribe import Segment
 from rich.progress import (
-    Progress,
-    TextColumn,
-    BarColumn,
     TaskProgressColumn,
     TimeRemainingColumn,
     SpinnerColumn,
@@ -128,7 +125,7 @@ class FileTranscriber:
         if segment_number == 0:
             # First Segment
             async with aiofiles.open(self.chapter_file, "a", encoding="utf-8") as f:
-                await f.write(f"00:00:00,0000, BOOK Start\n")
+                await f.write("00:00:00,0000, BOOK Start\n")
 
         if is_chapter(segment.text):
             time_hms = format_timestamp_srt(segment.start, offset)

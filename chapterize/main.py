@@ -116,7 +116,7 @@ async def async_upload(dir: str, api_key: str, abs_url: str, book_id: str | None
         console.print(f"Book ID: {book_id}")
     else:
         console.print(
-            f"We will query Audiobookshelf to attempt to determine the BOOK ID"
+            "We will query Audiobookshelf to attempt to determine the BOOK ID"
         )
     # Your async upload logic here
 

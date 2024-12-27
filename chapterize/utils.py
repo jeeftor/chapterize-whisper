@@ -4,18 +4,13 @@ from typing import List
 from rich.live import Live
 from rich.progress import (
     Progress,
-    TimeElapsedColumn,
     BarColumn,
     TextColumn,
     SpinnerColumn,
 )
 from rich.progress import (
-    Progress,
-    TextColumn,
-    BarColumn,
     TaskProgressColumn,
     TimeRemainingColumn,
-    SpinnerColumn,
 )
 from .const import console
 

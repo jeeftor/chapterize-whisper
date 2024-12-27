@@ -29,13 +29,41 @@ def cli():
 @click.option(
     '--dir',
     help='Directory containing books to process (or set BOOK_DIRECTORY env var)',
-    callback=validate_directory
+    envvar='BOOK_DIRECTORY',
+    callback=validate_directory,
+    show_envvar=True
 )
-def detect(dir: str):
+@click.option(
+    '--model',
+    default='tiny.en',
+    help='Whisper model to use tiny, tiny.en, base, base.en, small, small.en, distil-small.en, medium, medium.en, distil-medium.en, large-v1, large-v2, large-v3, large, distil-large-v2, distil-large-v3, large-v3-turbo, or turbo',
+    envvar='WHISPER_MODEL',
+    show_envvar = True
+)
+@click.option(
+    '--device',
+    default='auto',
+    help='Device to use (cpu, cuda, auto)',
+    show_envvar=True
+
+)
+@click.option(
+    '--num-workers',
+    default=8,
+    type=int,
+    help='Number of workers for parallel processing',
+)
+@click.option(
+    '--cpu-threads',
+    default=0,
+    type=int,
+    help='Number of CPU threads (0 uses default)',
+)
+def detect(dir: str, model: str, device: str, num_workers: int, cpu_threads: int):
     """Detect and process books in the specified directory."""
     asyncio.run(async_detect(dir))
 
-async def async_detect(dir: str):
+async def async_detect(dir: str, model: str, device: str, num_workers: int, cpu_threads: int):
     """Async implementation of detect command."""
     console.print(f"[green]Running detection mode on directory:[/green] {dir}")
     bt = BookTranscriber(dir)

@@ -27,14 +27,18 @@ from chapterize.utils import is_chapter, format_timestamp_srt
 console = Console()
 
 class FileTranscriber:
-    def __init__(self, audio_file: str) -> None:
+    def __init__(self,
+                 audio_file: str,
+                 model: str = "tiny.en",
+                 device: str = "auto",
+                 num_workers: int = 8,
+                 cpu_threads: int = 0) -> None:
         self.batch_info = None
         self.info = None
         self.audio_file = audio_file
         self.audio_directory = os.path.dirname(audio_file)
         self.parent_directory = os.path.basename(self.audio_directory)
 
-        # self.chapter_file_s = os.path.join(self.audio_directory, self.parent_directory + ".chapters_seconds")
         self.chapter_file = os.path.join(self.audio_directory, self.parent_directory + ".chapters")
         self.srt_file = os.path.join(self.audio_directory, self.parent_directory + ".srt")
         self.batch_srt_file = os.path.join(self.audio_directory, self.parent_directory + ".batch.srt")
@@ -42,10 +46,11 @@ class FileTranscriber:
         self.segments = None
         self.batch_segments = None
         self.model: WhisperModel = WhisperModel(
-            "tiny.en",
-            device="cpu",
+            model,
+            device=device,
             compute_type="int8",
-            num_workers=8
+            num_workers=num_workers,
+            cpu_threads=cpu_threads
         )
         self.model.beam_size = 5
         self.model.vad_filter = True
@@ -143,8 +148,15 @@ class FileTranscriber:
         return index + 1, info.duration + offset_seconds
 
 class BookTranscriber:
-    def __init__(self, directory: str) -> None:
+    def __init__(self, directory: str, model: str = 'tiny.en', device: str = 'auto',
+                 num_workers: int = 8, cpu_threads: int = 0) -> None:
         self.directory = directory
+        self.model_config = {
+            'model': model,
+            'device': device,
+            'num_workers': num_workers,
+            'cpu_threads': cpu_threads
+        }
         self.audio_files = self._get_audio_files()
         self._clean_detection_files()
         console.print(f"Found {len(self.audio_files)} audio files in {self.directory}")

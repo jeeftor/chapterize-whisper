@@ -1,11 +1,13 @@
 """Main File - prompts user for what they actually want to do"""
 
-
-
 import os
+import asyncio
 import click
+import functools
 from rich.console import Console
 from typing import Optional
+
+from chapterize.transcribe import BookTranscriber
 
 console = Console()
 
@@ -31,11 +33,13 @@ def cli():
 )
 def detect(dir: str):
     """Detect and process books in the specified directory."""
+    asyncio.run(async_detect(dir))
+
+async def async_detect(dir: str):
+    """Async implementation of detect command."""
     console.print(f"[green]Running detection mode on directory:[/green] {dir}")
-    # Your detection logic here
-
-
-    pass
+    bt = BookTranscriber(dir)
+    await bt.transcribe()
 
 @cli.command()
 @click.option(
@@ -64,13 +68,16 @@ def detect(dir: str):
 )
 def upload(dir: str, api_key: str, abs_url: str, book_id: str):
     """Upload books from the specified directory."""
+    asyncio.run(async_upload(dir, api_key, abs_url, book_id))
+
+async def async_upload(dir: str, api_key: str, abs_url: str, book_id: str):
+    """Async implementation of upload command."""
     console.print("[green]Running upload mode with the following configuration:[/green]")
     console.print(f"Directory: {dir}")
     console.print(f"API Key: {api_key[:4]}{'*' * (len(api_key) - 4)}")  # Mask the API key
     console.print(f"URL: {abs_url}")
     console.print(f"Book ID: {book_id}")
-    # Your upload logic here
-    pass
+    # Your async upload logic here
 
 if __name__ == '__main__':
     cli()

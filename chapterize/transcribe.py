@@ -204,3 +204,6 @@ class BookTranscriber:
         # Write the duration to the chapter files.
         async with aiofiles.open(chapter_file, 'a', encoding='utf-8') as f:
             await f.write(f"{format_timestamp_srt(book_duration,0)}, BOOK_END\n")
+
+
+        console.print(f"Finished transcription. Please review {chapter_file} for errors")

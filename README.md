@@ -1,5 +1,6 @@
 # Chapterize-Whisper
 
+_A utility written to help get better chapters for Audiobookshelf_ 
 
 Uses whisper and will make some automatic stuff
 
@@ -13,14 +14,17 @@ Download a free audiobook like this one:
 
 https://librivox.org/the-adventures-of-danny-meadow-mouse-by-thornton-w-burgess/
 
-Next run `example.py` to transcribe the book (You'll have to make a .env file with various data elements)
+and put it in some directory. Then we can use the `chapterize` command like:
+
+```bash
+chapterize detect --dir ./audio/danny_meadow_mouse_1301_librivox        
+```
 
 It will run a transcription process looking like this maybe:
 
 ![transscribe](docs/transcribe.jpg)
 
 Once done you'll get a `.chapter` file in the directory of your audio files. For example this is what came out:
-
 
 ```
 00:00:00,0000, BOOK Start

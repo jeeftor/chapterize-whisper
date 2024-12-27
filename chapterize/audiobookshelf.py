@@ -1,7 +1,8 @@
 import os
+import sys
 from dataclasses import dataclass
 from glob import glob
-
+from rich.prompt import Confirm
 import requests
 from urllib.parse import quote_plus
 
@@ -96,6 +97,10 @@ class ABSUpdater:
             key = list(search_results.keys())[0]
             book_id = search_results[key]
             console.print(f"Single book was found\n  [blue]Title:[/blue] [green]{key}[/green]\n  [blue]ID:[/blue] {book_id}")
+
+            upload = Confirm.ask("Do you wish to update the chapters for this book")
+            if not upload:
+                sys.exit(0)
             return book_id
         else:
             # Prompt for which book
@@ -117,7 +122,11 @@ class ABSUpdater:
 
             # If you need the value associated with the selected book
             selected_book_value = search_results[selected_book]
-            return  selected_book_value
+
+            upload = Confirm.ask("Do you wish to update the chapters for this book")
+            if not upload:
+                sys.exit(0)
+        return  selected_book_value
         pass
 
     def update_chapters(self, book_id: str):

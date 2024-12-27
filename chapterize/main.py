@@ -4,11 +4,9 @@ import os
 import asyncio
 import click
 from typing import Optional
-from const import console
+from .const import console
 from chapterize.audiobookshelf import ABSUpdater
 from chapterize.transcribe import BookTranscriber
-
-
 
 def validate_directory(ctx, param, value: Optional[str]) -> str:
     """Validate and return the directory path from either CLI or ENV."""
@@ -90,24 +88,31 @@ async def async_detect(dir: str, model: str, device: str, num_workers: int, cpu_
     '--id',
     'book_id',  # Use book_id as the parameter name to avoid conflict with Python's id()
     envvar='BOOK_ID',
-    help='Book ID for upload (or set BOOK_ID env var)',
-    required=True
+    help='Book ID for upload (or set BOOK_ID env var) - if left empty - auto-detection will be attempted.',
+    default=None,
+    required=False
 )
-def upload(dir: str, api_key: str, abs_url: str, book_id: str):
+def upload(dir: str, api_key: str, abs_url: str, book_id: str | None):
     """Upload books from the specified directory."""
     asyncio.run(async_upload(dir, api_key, abs_url, book_id))
 
-async def async_upload(dir: str, api_key: str, abs_url: str, book_id: str):
+async def async_upload(dir: str, api_key: str, abs_url: str, book_id: str | None):
     """Async implementation of upload command."""
     console.print("[green]Running upload mode with the following configuration:[/green]")
     console.print(f"Directory: {dir}")
     console.print(f"API Key: {api_key[:4]}{'*' * (len(api_key) - 4)}")  # Mask the API key
     console.print(f"URL: {abs_url}")
-    console.print(f"Book ID: {book_id}")
+    if book_id:
+        console.print(f"Book ID: {book_id}")
+    else:
+        console.print(f"We will query Audiobookshelf to attempt to determine the BOOK ID")
     # Your async upload logic here
 
     updater = ABSUpdater(book_directory=dir, abs_url=abs_url, api_key=api_key)
-    updater.update_chapters(id=book_id)
+    if not book_id:
+        book_id = updater.search()
+
+    updater.update_chapters(book_id)
 
 if __name__ == '__main__':
     cli()

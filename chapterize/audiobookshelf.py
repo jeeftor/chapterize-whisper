@@ -83,7 +83,7 @@ class ABSUpdater:
 
             for book in result['book']:
                 item = book['libraryItem']
-                id = item['libraryId']
+                id = item['id']
                 metadata = item['media']['metadata']
                 title = metadata['title']
                 author = metadata['authorName']

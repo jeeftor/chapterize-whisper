@@ -26,7 +26,9 @@ async def transcribe():
 async def update_chapters():
     updater = ABSUpdater(os.getenv("BOOK_DIRECTORY"), os.getenv("ABS_URL"), os.getenv("ABS_API_KEY"))
 
-    updater.update_chapters(os.getenv("BOOK_ID"))
+    # updater.update_chapters(os.getenv("BOOK_ID"))
+
+    updater.search()
 
 async def main():
 

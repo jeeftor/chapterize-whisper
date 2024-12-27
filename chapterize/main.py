@@ -3,14 +3,12 @@
 import os
 import asyncio
 import click
-import functools
-from rich.console import Console
 from typing import Optional
-
+from const import console
 from chapterize.audiobookshelf import ABSUpdater
 from chapterize.transcribe import BookTranscriber
 
-console = Console()
+
 
 def validate_directory(ctx, param, value: Optional[str]) -> str:
     """Validate and return the directory path from either CLI or ENV."""

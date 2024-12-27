@@ -15,10 +15,10 @@ def is_chapter(text: str) -> bool:
 
     # Common chapter indicators
     chapter_patterns = {
-        "chapter",
+        "chapter ",
         "part ",
-        "book",
-        "section",
+        "book ",
+        "section ",
         "prologue",
         "prolog",
         "epilogue",

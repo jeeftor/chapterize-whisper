@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "chapterize-whisper"
-version = "0.1.0"
+version = "0.1.2"
 description = ""
 authors = ["Jeff Stein <jeffstein@gmail.com>"]
 readme = "README.md"
@@ -11,7 +11,7 @@ chapterize = "chapterize.main:cli"
 
 
 [tool.poetry.dependencies]
-python = "^3.12"
+python = "^3.10"
 faster-whisper = "^1.1.0"
 rich = "^13.9.4"
 pydub = "^0.25.1"

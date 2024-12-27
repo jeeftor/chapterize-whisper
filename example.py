@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 
 from chapterize.audiobookshelf import ABSUpdater
 from chapterize.transcribe import BookTranscriber
+from chapterize.utils import process_mps_results
 
 # Load environment variables from .env file
 load_dotenv()
@@ -14,16 +15,16 @@ async def mps_transcribe():
     bt = BookTranscriber(os.getenv("INPUT_DIRECTORY"), use_mps=True)
 
     # Transcribe the file(s) please
-    # await bt.transcribe()
+    await bt.transcribe()
 
-
-    with open("output.json", "r", encoding="utf8") as fp:
-        results = json.load(fp)
-
-    done_results = bt.process_mps_results(results)
-
-    with open("done.json", "w", encoding="utf8") as fp:
-        json.dump(done_results, fp, ensure_ascii=False)
+    #
+    # with open("output.json", "r", encoding="utf8") as fp:
+    #     results = json.load(fp)
+    #
+    # done_results = process_mps_results(results)
+    #
+    # with open("done.json", "w", encoding="utf8") as fp:
+    #     json.dump(done_results, fp, ensure_ascii=False)
 
 
 async def transcribe():

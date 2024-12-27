@@ -26,6 +26,7 @@ whisper-mps = { version = "^0.0.7",  markers = "sys_platform == 'darwin'"}
 
 [tool.poetry.group.dev.dependencies]
 twine = "^6.0.1"
+ruff = "^0.8.4"
 
 [build-system]
 requires = ["poetry-core"]
